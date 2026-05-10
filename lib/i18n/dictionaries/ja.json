@@ -145,7 +145,8 @@
             "drawio": "Draw.io XML",
             "png": "PNG 画像",
             "svg": "SVG 画像",
-            "xmlsvg": "編集可能 SVG"
+            "xmlsvg": "編集可能 SVG",
+            "vsdx": "Visio (VSDX)"
         },
         "savedSuccessfully": "保存完了！"
     },

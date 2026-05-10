@@ -282,6 +282,12 @@ export function DiagramProvider({ children }: { children: React.ReactNode }) {
             return
         }
 
+        // VSDX requires server-side conversion — handle separately
+        if (format === "vsdx") {
+            exportAsVsdx(filename, chartXML, sessionId, successMessage)
+            return
+        }
+
         // Map format to draw.io export format
         const drawioFormat =
             format === "drawio" || format === "xmlsvg" ? "xmlsvg" : format
@@ -361,6 +367,59 @@ export function DiagramProvider({ children }: { children: React.ReactNode }) {
 
         // Export diagram - callback will be handled in handleDiagramExport
         drawioRef.current.exportDiagram({ format: drawioFormat })
+    }
+
+    const exportAsVsdx = async (
+        filename: string,
+        xml: string,
+        sessionId?: string,
+        successMessage?: string,
+    ) => {
+        try {
+            const res = await fetch(getApiEndpoint("/api/export-vsdx"), {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ xml, filename }),
+            })
+
+            if (!res.ok) {
+                throw new Error(`Server returned ${res.status}`)
+            }
+
+            const blob = await res.blob()
+            const url = URL.createObjectURL(blob)
+
+            const a = document.createElement("a")
+            a.href = url
+            a.download = `${filename}.vsdx`
+            document.body.appendChild(a)
+            a.click()
+            document.body.removeChild(a)
+            setTimeout(() => URL.revokeObjectURL(url), 100)
+
+            logSaveToLangfuse(filename, "vsdx", sessionId)
+
+            if (successMessage) {
+                toast.success(successMessage, {
+                    position: "bottom-left",
+                    duration: 2500,
+                })
+            }
+        } catch (error) {
+            console.error("VSDX export failed:", error)
+            toast.error(
+                "VSDX conversion failed. Downloading as .drawio instead.",
+                {
+                    position: "bottom-left",
+                    duration: 4000,
+                    action: {
+                        label: "Download .drawio",
+                        onClick: () =>
+                            saveDiagramToFile(filename, "drawio", sessionId),
+                    },
+                },
+            )
+        }
     }
 
     // Log save event to Langfuse (just flags the trace, doesn't send content)
